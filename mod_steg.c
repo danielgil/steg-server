@@ -2,7 +2,7 @@
 **  mod_steg.c -- Apache sample steg module
 **
 **    Compile:
-**    $ apxs -c -i mod_steg.c
+**    $ apxs -c -i -Iinclude mod_steg.c utils.c
 **
 **    Configure:
 **    LoadModule steg_module modules/mod_steg.so
@@ -11,7 +11,7 @@
 **    </Location>
 **
 **    Test:
-**    $ lynx -mime_header http://localhost/steg 
+**    $ curl -H "Accept-Encoding: gzip, deflate, 1234test" localhost 
 **
 */ 
 
@@ -24,6 +24,7 @@
 #include "util_filter.h"
 #include "http_log.h"
 #include "apr_file_io.h"
+#include "utils.h"
 
 
 /* Configuration structure */
@@ -97,7 +98,6 @@ static apr_status_t stegInputFilter(ap_filter_t *f,
                                       apr_read_type_e block,
                                       apr_off_t readbytes)
 {
-    apr_status_t rv;
     const char *injected_header; //In the prototype, only straight head injection steganography will be used
 
     // Get the request_rec object from the filter object
@@ -106,29 +106,10 @@ static apr_status_t stegInputFilter(ap_filter_t *f,
     // Get the value of the HTTP header
     injected_header = apr_table_get(r->headers_in, config.methodconfig);
 
+    // Write the header to the inputfile
+    write_inputfile(injected_header, r, config.inputfile);
 
-    apr_file_t *file;
-    rv = apr_file_open(&file, config.inputfile, APR_FOPEN_CREATE|APR_FOPEN_WRITE|APR_FOPEN_APPEND|APR_FOPEN_BINARY|APR_FOPEN_XTHREAD, APR_FPROT_OS_DEFAULT, r->pool);
-    if (rv != APR_SUCCESS) {
-        ap_log_rerror(APLOG_MARK, APLOG_ERR, rv, r, "Failed to open file %s", config.inputfile) ;
-        return rv;
-    }
-
-    apr_size_t size = strlen(injected_header);
-    rv = apr_file_write(file, injected_header, &size);
-    if (rv != APR_SUCCESS) {
-        ap_log_rerror(APLOG_MARK, APLOG_ERR, rv, r, "Failed to write file %s", config.inputfile) ;
-        return rv;
-    }
-
-    rv = apr_file_close(file);
-    if (rv != APR_SUCCESS) {
-        ap_log_rerror(APLOG_MARK, APLOG_ERR, rv, r, "Failed to close file %s", config.inputfile) ;
-        return rv;
-    }
-
-    ap_log_rerror(APLOG_MARK, APLOG_ERR, rv, r, "Header value: %s", injected_header) ;
-    
+    // Return the unmodified bucket brigade. This makes the filter transparent.
     return ap_get_brigade(f->next, bb, mode, block, readbytes);
 }
 
