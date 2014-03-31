@@ -12,58 +12,13 @@
 #include "util_filter.h"
 #include "http_log.h"
 #include "apr_file_io.h"
+
 #include "utils.h"
+#include "config.h"
 
-
-/* Configuration structure */
-typedef struct {
-    int         enabled;      /* Enable or disable our module */
-    const char *inputfile;    /* File where we read the outgoing hidden info from */
-    const char *outputfile;   /* File where we write the incoming hidden info to */
-    const char *knockcode;    /* Pre-shared key to identify a steganogram */
-    const char *method;       /* Steganography method to be used */
-    const char *methodconfig; /* Configuration of the steganography method */
-} steg_config;
 
 /* Instance the configuration structure */
-static steg_config config;
-
-/* Handler for the "stegEnabled" directive */
-const char *steg_set_enabled(cmd_parms *cmd, void *cfg, const char *arg)
-{
-    if(!strcasecmp(arg, "on")) config.enabled = 1;
-    else config.enabled = 0;
-    return NULL;
-}
-
-/* Handler for the "stegInputFile" directive */
-const char *steg_set_inputfile(cmd_parms *cmd, void *cfg, const char *arg)
-{
-    config.inputfile = arg;
-    return NULL;
-}
-
-/* Handler for the "stegOutputFile" directive */
-const char *steg_set_outputfile(cmd_parms *cmd, void *cfg, const char *arg)
-{
-    config.outputfile = arg;
-    return NULL;
-}
-
-/* Handler for the "stegKnockCode" directive */
-const char *steg_set_knockcode(cmd_parms *cmd, void *cfg, const char *arg)
-{
-    config.knockcode = arg;
-    return NULL;
-}
-
-/* Handler for the "stegMethod" directive */
-const char *steg_set_method(cmd_parms *cmd, void *cfg, const char *method, const char *methodconfig)
-{
-    config.method = method;
-    config.methodconfig = methodconfig;
-    return NULL;
-}
+steg_config config;
 
 /* Table of configuration directives */
 static const command_rec        steg_directives[] =
@@ -75,9 +30,6 @@ static const command_rec        steg_directives[] =
     AP_INIT_TAKE2("stegMethod", steg_set_method, NULL, RSRC_CONF, "Configure the steganography method to be used"),
     { NULL }
 };
-
-
-
 
 /* Input Filter function */
 static apr_status_t stegInputFilter(ap_filter_t *f,
@@ -100,8 +52,6 @@ static apr_status_t stegInputFilter(ap_filter_t *f,
     // Return the unmodified bucket brigade. This makes the filter transparent.
     return ap_get_brigade(f->next, bb, mode, block, readbytes);
 }
-
-
 
 
 /* The sample content handler that will eventually be deleted */
