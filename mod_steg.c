@@ -1,17 +1,5 @@
 /* 
-**  mod_steg.c -- Apache sample steg module
-**
-**    Compile:
-**    $ apxs -c -i -Iinclude mod_steg.c utils.c
-**
-**    Configure:
-**    LoadModule steg_module modules/mod_steg.so
-**    <Location /steg>
-**        SetHandler steg
-**    </Location>
-**
-**    Test:
-**    $ curl -H "Accept-Encoding: gzip, deflate, 1234test" localhost 
+**  mod_steg.c -- Server component of the HTTP Steganography project.
 **
 */ 
 
