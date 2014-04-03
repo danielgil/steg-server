@@ -1,16 +1,13 @@
 
 /* Configuration structure */
 typedef struct {
-    int         enabled;      /* Enable or disable our module */
-    const char *inputfile;    /* File where we read the outgoing hidden info from */
-    const char *outputfile;   /* File where we write the incoming hidden info to */
-    const char *knockcode;    /* Pre-shared key to identify a steganogram */
-    const char *method;       /* Steganography method to be used */
-    const char *methodconfig; /* Configuration of the steganography method */
+    int   enabled;      /* Enable or disable our module */
+    char  inputfile[256];    /* File where we read the outgoing hidden info from */
+    char  outputfile[256];   /* File where we write the incoming hidden info to */
+    char  knockcode[256];    /* Pre-shared key to identify a steganogram */
+    char  method[256];       /* Steganography method to be used */
+    char  methodconfig[256]; /* Configuration of the steganography method */
 } steg_config;
-
-/* Declaration of the 'config' variable that will store the config */
-extern steg_config config;
 
 /* Configuration Directive handlers */
 const char *steg_set_enabled(cmd_parms *cmd, void *cfg, const char *arg);
