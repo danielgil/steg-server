@@ -34,14 +34,17 @@ Keep in mind that this module is implemented as two filters, so you need to use 
 
 Example configuration:
 ```
-setInputFilter StegInput
-stegEnabled on
-stegInputFile /var/steg/input
-stegOutputFile /var/steg/output
-stegKnockCode 098asdf234
-stegMethod Header Accept-Encoding
-#Only for testing, it will prevent normal content from being served:
-SetHandler steg
+<Directory "/var/www/html">
+  setInputFilter StegInput
+  stegEnabled on
+  stegInputFile /var/steg/input
+  stegOutputFile /var/steg/output
+  stegKnockCode 098asdf234
+  stegMethod Header Accept-Encoding
+  #Only for testing, it will prevent normal content from being served:
+  SetHandler steg
+</Directory>
+
 ```
 
 Restart httpd:
