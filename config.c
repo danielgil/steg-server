@@ -25,7 +25,7 @@ const char *steg_set_inputfile(cmd_parms *cmd, void *cfg, const char *arg)
     steg_config *conf = (steg_config *) cfg;
     if(conf)
     {
-        safe_strcpy(conf->inputfile, arg, CONFIG_FIELD_SIZE);
+        safe_strcpy(conf->inputfile, arg, CONFIG_FIELD_SIZE);       
     }
     return NULL;
 }

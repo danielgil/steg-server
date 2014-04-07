@@ -35,12 +35,13 @@ int write_inputfile(const char *buffer, request_rec *r, const char *filename)
 
 // Safe string copy
 int safe_strcpy(char *dest, const char *source, int maxsize){
+
     int length=strlen(source);
-    if (length > maxsize){
+    if (length >= maxsize){
         strncpy(dest, source, maxsize)[maxsize-1] = '\0';
         return maxsize;
     }else{
-        strncpy(dest, source, length);
+        strcpy(dest, source);
         return length;
     }
 }
