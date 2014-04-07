@@ -1,7 +1,7 @@
 *~
-.la
-.lo
-.slo
+*.la
+*.lo
+*.slo
 .deps
 .libs
 
