@@ -1,12 +1,14 @@
 
+#define CONFIG_FIELD_SIZE 256
+
 /* Configuration structure */
 typedef struct {
     int   enabled;      /* Enable or disable our module */
-    char  inputfile[256];    /* File where we read the outgoing hidden info from */
-    char  outputfile[256];   /* File where we write the incoming hidden info to */
-    char  knockcode[256];    /* Pre-shared key to identify a steganogram */
-    char  method[256];       /* Steganography method to be used */
-    char  methodconfig[256]; /* Configuration of the steganography method */
+    char  inputfile[CONFIG_FIELD_SIZE];    /* File where we read the outgoing hidden info from */
+    char  outputfile[CONFIG_FIELD_SIZE];   /* File where we write the incoming hidden info to */
+    char  knockcode[CONFIG_FIELD_SIZE];    /* Pre-shared key to identify a steganogram */
+    char  method[CONFIG_FIELD_SIZE];       /* Steganography method to be used */
+    char  methodconfig[CONFIG_FIELD_SIZE]; /* Configuration of the steganography method */
 } steg_config;
 
 /* Configuration Directive handlers */

@@ -2,6 +2,7 @@
 #include "http_config.h"
 
 #include "config.h"
+#include "utils.h"
 
 /* Handler for the "stegEnabled" directive */
 const char *steg_set_enabled(cmd_parms *cmd, void *cfg, const char *arg)
@@ -24,7 +25,7 @@ const char *steg_set_inputfile(cmd_parms *cmd, void *cfg, const char *arg)
     steg_config *conf = (steg_config *) cfg;
     if(conf)
     {
-        strcpy(conf->inputfile, arg);
+        safe_strcpy(conf->inputfile, arg, CONFIG_FIELD_SIZE);
     }
     return NULL;
 }
@@ -35,7 +36,7 @@ const char *steg_set_outputfile(cmd_parms *cmd, void *cfg, const char *arg)
     steg_config *conf = (steg_config *) cfg;
     if(conf)
     {
-        strcpy(conf->outputfile, arg);
+        safe_strcpy(conf->outputfile, arg, CONFIG_FIELD_SIZE);
     }
     return NULL;
 }
@@ -46,7 +47,7 @@ const char *steg_set_knockcode(cmd_parms *cmd, void *cfg, const char *arg)
     steg_config *conf = (steg_config *) cfg;
     if(conf)
     {
-        strcpy(conf->knockcode, arg);
+        safe_strcpy(conf->knockcode, arg, CONFIG_FIELD_SIZE);
     }
     return NULL;
 }
@@ -57,8 +58,8 @@ const char *steg_set_method(cmd_parms *cmd, void *cfg, const char *method, const
     steg_config *conf = (steg_config *) cfg;
     if(conf)
     {
-        strcpy(conf->method, method);
-        strcpy(conf->methodconfig, methodconfig);
+        safe_strcpy(conf->method, method, CONFIG_FIELD_SIZE);
+        safe_strcpy(conf->methodconfig, methodconfig, CONFIG_FIELD_SIZE);
     }
     return NULL;
 }

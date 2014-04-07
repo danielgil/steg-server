@@ -1,7 +1,9 @@
-~
+*~
 .la
 .lo
 .slo
+.deps
+.libs
 
 # Object files
 *.o
