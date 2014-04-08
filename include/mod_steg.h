@@ -2,7 +2,7 @@
 static int steg_handler(request_rec *r);
 
 void *create_dir_conf(apr_pool_t *pool, char *context);
-
+void *create_server_conf(apr_pool_t *pool, server_rec *s);
 void *merge_dir_conf(apr_pool_t *pool, void *BASE, void *ADD);
 
 static void steg_register_hooks(apr_pool_t *p);

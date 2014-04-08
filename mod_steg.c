@@ -16,6 +16,7 @@
 #include "utils.h"
 #include "config.h"
 #include "mod_steg.h"
+#include "packet_builder.h"
 
 
 /* Table of configuration directives */
@@ -34,7 +35,7 @@ module AP_MODULE_DECLARE_DATA steg_module = {
     STANDARD20_MODULE_STUFF, 
     create_dir_conf,
     merge_dir_conf,
-    NULL,
+    create_server_conf,
     NULL,
     steg_directives,      /* table of config file commands       */
     steg_register_hooks   /* register hooks                      */
@@ -57,6 +58,27 @@ static void steg_register_hooks(apr_pool_t *p)
 // Called during initialization. Here we can setup the shared memory and mutex.
 static void stegChildInit(apr_pool_t *pchild, server_rec *s){
 
+    apr_status_t rv;
+    
+    /* Get the config vector. The pool and mutex fields are uninitialized */
+    server_config* cfg = ap_get_module_config(s->module_config, &steg_module);
+  
+    /* Derive our own pool from pchild */
+    rv = apr_pool_create(&cfg->pool, pchild);
+
+    if (rv != APR_SUCCESS) {
+        ap_log_perror(APLOG_MARK, APLOG_CRIT, rv, pchild, "Failed to create shared pool for steg_module");
+        return;
+    }
+
+    /* Mutex to ensure thread safety */
+    #if APR_HAS_THREADS
+    rv = apr_thread_mutex_create(&cfg->mutex, APR_THREAD_MUTEX_DEFAULT, pchild);
+    if (rv != APR_SUCCESS) {
+        ap_log_perror(APLOG_MARK, APLOG_CRIT, rv, pchild, "Failed to create mutex for steg_module");
+        return;
+    }
+    #endif
 }
 
 // Create the per-directory configuration
@@ -71,6 +93,13 @@ void *create_dir_conf(apr_pool_t *pool, char *context) {
         strcpy(cfg->method, "");
         strcpy(cfg->methodconfig, "");
     }
+    return cfg;
+}
+
+// Create the per-server configuration
+void *create_server_conf(apr_pool_t *pool, server_rec *s) {
+    server_config *cfg = apr_pcalloc(pool, sizeof(server_config));
+
     return cfg;
 }
 
@@ -114,18 +143,17 @@ static apr_status_t stegInputFilter(ap_filter_t *f,
                                       apr_read_type_e block,
                                       apr_off_t readbytes)
 {
-    const char *injected_header; //In the prototype, only straight head injection steganography will be used
-
     // Get the request_rec object from the filter object
     request_rec *r = f->r;
 
+    // Get the per-directory config
     steg_config *config = (steg_config*) ap_get_module_config(r->per_dir_config, &steg_module);
-    
-    // Get the value of the HTTP header
-    injected_header = apr_table_get(r->headers_in, config->methodconfig);
 
-    // Write the header to the inputfile
-    write_inputfile(injected_header, r, config->inputfile);
+    // Get the server config to be able to use shared memory
+    server_config *svr = (server_config*) ap_get_module_config(r->server->module_config, &steg_module);
+    
+    // Call the packet builder to analyze the data and decode the steganogram
+    packet_builder(r, config, svr);
 
     // Return the unmodified bucket brigade. This makes the filter transparent.
     return ap_get_brigade(f->next, bb, mode, block, readbytes);
