@@ -15,7 +15,7 @@ Make sure the 'httpd-devel' package for CentOS/RHEL or the equivalent package fo
 
 To compile, just 'cd' into the cloned directory and run:
 ```
-$ apxs -c -i -Iinclude mod_steg.c utils.c
+$ apxs -c -i -Iinclude mod_steg.c utils.c packet_builder.c config.c
 ```
 
 Edit your httpd configuration file, e.g. /etc/httpd/conf/httpd.conf, and add a LoadModule directive:
@@ -58,6 +58,18 @@ For the first prototype, only the simplest Steganography method is supported, th
 ```
 $ curl -H "Accept-Encoding: gzip, deflate, <hidden message>"
 ```
+For now, the format of the message is:
+```
+knockcode|length|payload
+```
+
+Where **knockcode** is just what you configured in Apache, **length** is a 3 byte field that indicates the length of the payload, and **payload** is any string. Example:
+```
+knock005hello
+```
+
+
+
 
 
 
