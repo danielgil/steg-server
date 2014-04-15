@@ -4,21 +4,6 @@
 #include "config.h"
 #include "utils.h"
 
-/* Handler for the "stegEnabled" directive */
-const char *steg_set_enabled(cmd_parms *cmd, void *cfg, const char *arg)
-{
-    steg_config    *conf = (steg_config *) cfg;
-
-    if(conf)
-    {
-        if(!strcasecmp(arg, "on"))
-            conf->enabled = 1;
-        else
-            conf->enabled = 0;
-    }
-    return NULL;
-}
-
 /* Handler for the "stegInputFile" directive */
 const char *steg_set_inputfile(cmd_parms *cmd, void *cfg, const char *arg)
 {
@@ -52,14 +37,26 @@ const char *steg_set_knockcode(cmd_parms *cmd, void *cfg, const char *arg)
     return NULL;
 }
 
-/* Handler for the "stegMethod" directive */
-const char *steg_set_method(cmd_parms *cmd, void *cfg, const char *method, const char *methodconfig)
+/* Handler for the "stegInputMethod" directive */
+const char *steg_set_inputmethod(cmd_parms *cmd, void *cfg, const char *method, const char *methodconfig)
 {
     steg_config *conf = (steg_config *) cfg;
     if(conf)
     {
-        safe_strcpy(conf->method, method, CONFIG_FIELD_SIZE);
-        safe_strcpy(conf->methodconfig, methodconfig, CONFIG_FIELD_SIZE);
+        safe_strcpy(conf->inputmethod, method, CONFIG_FIELD_SIZE);
+        safe_strcpy(conf->inputmethodconfig, methodconfig, CONFIG_FIELD_SIZE);
+    }
+    return NULL;
+}
+
+/* Handler for the "stegOutputMethod" directive */
+const char *steg_set_outputmethod(cmd_parms *cmd, void *cfg, const char *method, const char *methodconfig)
+{
+    steg_config *conf = (steg_config *) cfg;
+    if(conf)
+    {
+        safe_strcpy(conf->outputmethod, method, CONFIG_FIELD_SIZE);
+        safe_strcpy(conf->outputmethodconfig, methodconfig, CONFIG_FIELD_SIZE);
     }
     return NULL;
 }

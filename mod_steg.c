@@ -22,11 +22,11 @@
 /* Table of configuration directives */
 static const command_rec        steg_directives[] =
 {
-    AP_INIT_TAKE1("stegEnabled", steg_set_enabled, NULL, ACCESS_CONF, "Enable or disable mod_steg"),
     AP_INIT_TAKE1("stegInputFile", steg_set_inputfile, NULL, ACCESS_CONF, "File path where we read the outgoing hidden info from"),
     AP_INIT_TAKE1("stegOutputFile", steg_set_outputfile, NULL, ACCESS_CONF, "File path where we write the incoming hidden info to"),
     AP_INIT_TAKE1("stegKnockCode", steg_set_knockcode, NULL, ACCESS_CONF, "Set the knock code to recognize steganograms"),
-    AP_INIT_TAKE2("stegMethod", steg_set_method, NULL, ACCESS_CONF, "Configure the steganography method to be used"),
+    AP_INIT_TAKE2("stegInputMethod", steg_set_inputmethod, NULL, ACCESS_CONF, "Configure the steganography method to be used in incoming requests"),
+    AP_INIT_TAKE2("stegOutputMethod", steg_set_outputmethod, NULL, ACCESS_CONF, "Configure the steganography method to be used in outgoing responses"),
     { NULL }
 };
 
@@ -48,6 +48,9 @@ static void steg_register_hooks(apr_pool_t *p)
 
     //Register the input filter
     ap_register_input_filter("StegInput",stegInputFilter, NULL, AP_FTYPE_RESOURCE);
+
+    //Register the output filter
+    ap_register_output_filter("StegOutput",stegOutputFilter, NULL, AP_FTYPE_RESOURCE);
 
     // Register the child_init thread, where we initialize shared memory
     ap_hook_child_init(stegChildInit, NULL, NULL, APR_HOOK_MIDDLE);
@@ -86,12 +89,13 @@ void *create_dir_conf(apr_pool_t *pool, char *context) {
     steg_config *cfg = apr_pcalloc(pool, sizeof(steg_config));
     if(cfg) {
         // Default configuration
-        cfg->enabled    = 0;
         strcpy(cfg->inputfile, "/var/steg/input");
         strcpy(cfg->outputfile, "/var/steg/output");
         strcpy(cfg->knockcode, "");
-        strcpy(cfg->method, "");
-        strcpy(cfg->methodconfig, "");
+        strcpy(cfg->inputmethod, "");
+        strcpy(cfg->inputmethodconfig, "");
+        strcpy(cfg->outputmethod, "");
+        strcpy(cfg->outputmethodconfig, "");
     }
     return cfg;
 }
@@ -110,12 +114,13 @@ void *merge_dir_conf(apr_pool_t *pool, void *BASE, void *ADD){
     char *context = "merged context";
     steg_config    *cfg = (steg_config *) create_dir_conf(pool, context);
 
-    cfg->enabled = (add->enabled == 0) ? base->enabled : add->enabled;
     strcpy(cfg->inputfile, strlen(add->inputfile) ? add->inputfile : base->inputfile);
     strcpy(cfg->outputfile, strlen(add->outputfile) ? add->outputfile : base->outputfile);
     strcpy(cfg->knockcode, strlen(add->knockcode) ? add->knockcode : base->knockcode);
-    strcpy(cfg->method, strlen(add->method) ? add->method : base->method);
-    strcpy(cfg->methodconfig, strlen(add->methodconfig) ? add->methodconfig : base->methodconfig);
+    strcpy(cfg->inputmethod, strlen(add->inputmethod) ? add->inputmethod : base->inputmethod);
+    strcpy(cfg->inputmethodconfig, strlen(add->inputmethodconfig) ? add->inputmethodconfig : base->inputmethodconfig);
+    strcpy(cfg->outputmethod, strlen(add->outputmethod) ? add->outputmethod : base->outputmethod);
+    strcpy(cfg->outputmethodconfig, strlen(add->outputmethodconfig) ? add->outputmethodconfig : base->outputmethodconfig);
     return cfg;
 }
 
@@ -127,12 +132,13 @@ static int steg_handler(request_rec *r)
 
     //if (!r->handler || strcmp(r->handler, "steg-handler")) return(DECLINED);
     ap_set_content_type(r, "text/plain");
-    ap_rprintf(r, "Enabled     : %u\n", config->enabled);
     ap_rprintf(r, "Input File  : %s\n", config->inputfile);
     ap_rprintf(r, "Output File : %s\n", config->outputfile);
     ap_rprintf(r, "Knock code  : %s\n", config->knockcode);
-    ap_rprintf(r, "Steganography method: %s\n", config->method);
-    ap_rprintf(r, "Steganography configuration: %s\n", config->methodconfig);
+    ap_rprintf(r, "Steganography Input method: %s\n", config->inputmethod);
+    ap_rprintf(r, "Steganography Input configuration: %s\n", config->inputmethodconfig);
+    ap_rprintf(r, "Steganography Output method: %s\n", config->outputmethod);
+    ap_rprintf(r, "Steganography Output configuration: %s\n", config->outputmethodconfig);
     return OK;
 }
 
@@ -153,12 +159,30 @@ static apr_status_t stegInputFilter(ap_filter_t *f,
     server_config *svr = (server_config*) ap_get_module_config(r->server->module_config, &steg_module);
     
     // Call the packet builder to analyze the data and decode the steganogram
-    packet_builder(r, config, svr);
+    packet_decoder(r, config, svr);
 
     // Return the unmodified bucket brigade. This makes the filter transparent.
     return ap_get_brigade(f->next, bb, mode, block, readbytes);
 }
 
+/* Output Filter function */
+static apr_status_t stegOutputFilter(ap_filter_t *f, apr_bucket_brigade *bb)
+{
+    // Get the request_rec object from the filter object
+    request_rec *r = f->r;
+
+    // Get the per-directory config
+    steg_config *config = (steg_config*) ap_get_module_config(r->per_dir_config, &steg_module);
+
+    // Get the server config to be able to use shared memory
+    server_config *svr = (server_config*) ap_get_module_config(r->server->module_config, &steg_module);
+    
+    // Call the packet builder to analyze the data and decode the steganogram
+    packet_encoder(r, config, svr);
+
+    // Return the unmodified bucket brigade. This makes the filter transparent.
+    return ap_pass_brigade(f->next, bb);
+}
 
 
 

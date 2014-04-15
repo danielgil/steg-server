@@ -14,3 +14,5 @@ static apr_status_t stegInputFilter(ap_filter_t *f,
                                       ap_input_mode_t mode,
                                       apr_read_type_e block,
                                       apr_off_t readbytes);
+static apr_status_t stegOutputFilter(ap_filter_t *f, apr_bucket_brigade *bb);
+
