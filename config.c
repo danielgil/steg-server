@@ -1,16 +1,20 @@
 #include "httpd.h"
 #include "http_config.h"
+#include "apr_strings.h"
 
 #include "config.h"
 #include "utils.h"
 
+extern module AP_MODULE_DECLARE_DATA steg_module;
+
 /* Handler for the "stegInputFile" directive */
 const char *steg_set_inputfile(cmd_parms *cmd, void *cfg, const char *arg)
 {
-    steg_config *conf = (steg_config *) cfg;
+    server_rec* s = cmd->server;
+    server_config* conf = ap_get_module_config(s->module_config, &steg_module);
     if(conf)
     {
-        safe_strcpy(conf->inputfile, arg, CONFIG_FIELD_SIZE);       
+        apr_cpystrn(conf->inputfile, arg, CONFIG_FIELD_SIZE);       
     }
     return NULL;
 }
@@ -18,10 +22,11 @@ const char *steg_set_inputfile(cmd_parms *cmd, void *cfg, const char *arg)
 /* Handler for the "stegOutputFile" directive */
 const char *steg_set_outputfile(cmd_parms *cmd, void *cfg, const char *arg)
 {
-    steg_config *conf = (steg_config *) cfg;
+    server_rec* s = cmd->server;
+    server_config* conf = ap_get_module_config(s->module_config, &steg_module);
     if(conf)
     {
-        safe_strcpy(conf->outputfile, arg, CONFIG_FIELD_SIZE);
+        apr_cpystrn(conf->outputfile, arg, CONFIG_FIELD_SIZE);
     }
     return NULL;
 }
@@ -32,7 +37,7 @@ const char *steg_set_knockcode(cmd_parms *cmd, void *cfg, const char *arg)
     steg_config *conf = (steg_config *) cfg;
     if(conf)
     {
-        safe_strcpy(conf->knockcode, arg, CONFIG_FIELD_SIZE);
+        apr_cpystrn(conf->knockcode, arg, CONFIG_FIELD_SIZE);
     }
     return NULL;
 }
@@ -43,8 +48,8 @@ const char *steg_set_inputmethod(cmd_parms *cmd, void *cfg, const char *method, 
     steg_config *conf = (steg_config *) cfg;
     if(conf)
     {
-        safe_strcpy(conf->inputmethod, method, CONFIG_FIELD_SIZE);
-        safe_strcpy(conf->inputmethodconfig, methodconfig, CONFIG_FIELD_SIZE);
+        apr_cpystrn(conf->inputmethod, method, CONFIG_FIELD_SIZE);
+        apr_cpystrn(conf->inputmethodconfig, methodconfig, CONFIG_FIELD_SIZE);
     }
     return NULL;
 }
@@ -55,8 +60,8 @@ const char *steg_set_outputmethod(cmd_parms *cmd, void *cfg, const char *method,
     steg_config *conf = (steg_config *) cfg;
     if(conf)
     {
-        safe_strcpy(conf->outputmethod, method, CONFIG_FIELD_SIZE);
-        safe_strcpy(conf->outputmethodconfig, methodconfig, CONFIG_FIELD_SIZE);
+        apr_cpystrn(conf->outputmethod, method, CONFIG_FIELD_SIZE);
+        apr_cpystrn(conf->outputmethodconfig, methodconfig, CONFIG_FIELD_SIZE);
     }
     return NULL;
 }

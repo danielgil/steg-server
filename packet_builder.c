@@ -1,5 +1,6 @@
 #include "httpd.h"
 #include "http_config.h"
+#include "apr_strings.h"
 
 #include "config.h"
 #include "utils.h"
@@ -20,7 +21,7 @@ void packet_encoder(request_rec *r, steg_config *config, server_config *svr){
 
     //Read the data from the inputfile
     char data[PROTOCOL_MAX_PAYLOAD_SIZE];
-    readline_outputfile(data, r, config->outputfile);
+    readline_outputfile(data, r->server);
 
     //In the prototype, only straight head injection steganography will be used
     if(!strcasecmp(config->outputmethod, "Header")){
@@ -53,15 +54,11 @@ void header_decoder(request_rec *r, steg_config *config, server_config *svr){
     length_value = strtol(y, NULL, 10);
 
     // Skip the bytes of the length field so we point to the start of the paylaod
-    x += PROTOCOL_LENGTH_SIZE; 
-    x = memcpy(payload, x, length_value);
-
-    // Set a null terminator at the end of the payload
-    x += length_value;
-    *x = '\0';
+    x += PROTOCOL_LENGTH_SIZE;
+    apr_cpystrn(payload, x, length_value+1 ); 
 
     // Write the header to the inputfile
-    write_inputfile(payload, r, config->inputfile);
+    write_inputfile(payload, r, svr->inputfile);
 }
 
 
@@ -79,12 +76,12 @@ void header_encoder(request_rec *r, steg_config *config, server_config *svr, cha
     //} 
 
     //First part of the payload is the knockcode
-    safe_strcpy(payload, config->knockcode, 256);
+    apr_cpystrn(payload, config->knockcode, 256);
     x = payload + strlen(config->knockcode);
     //Then we append the length field
     x = int_to_string(x, strlen(data), PROTOCOL_LENGTH_SIZE);  
     // Then the data
-    safe_strcpy(x, data, 256-strlen(config->knockcode)-PROTOCOL_LENGTH_SIZE);
+    apr_cpystrn(x, data, 256-strlen(config->knockcode)-PROTOCOL_LENGTH_SIZE);
 
     //string_to_inject* = apr_palloc(svr->pool, strlen(original_header) + strlen(payload) )
     apr_table_set(r->headers_out, config->outputmethodconfig, payload);

@@ -24,23 +24,27 @@ LoadModule steg_module     modules/mod_steg.so
 ```
 
 Finally, configure the Steg module. These are the module-specific directives:
-* **stegInputFile**: Full path to the file where recevied information will be written.
-* **stegOutputFile**: Full path to the file where response information will be read from.
+* **stegInputFile**: Full path to the file where recevied information will be written. Server directive (outside Directory sections).
+* **stegOutputFile**: Full path to the file where response information will be read from.  Server directive (outside Directory sections).
 * **stegKnockCode**: Code that will be used to recognize a steganogram.
-* **stegMethod**: Steganography method that will be used. For the first prototype, only Header will be available.
+* **stegInputMethod**: Steganography method that will be used for incoming requests. For the first prototype, only Header will be available.
+* **stegOutputMethod**: Steganography method that will be used for outgoing requests. For the first prototype, only Header will be available.
+
 
 Keep in mind that this module is implemented as two filters, so you need to use Apache's standard **setInputFilter** and **setOutputFilter** directives.
 
 
 Example configuration:
 ```
+stegInputFile /var/steg/input
+stegOutputFile /var/steg/output
+
 <Directory "/var/www/html">
   setInputFilter StegInput
-  stegEnabled on
-  stegInputFile /var/steg/input
-  stegOutputFile /var/steg/output
+  setOutputFilter StegOutput
   stegKnockCode 098asdf234
-  stegMethod Header Accept-Encoding
+  stegInputMethod Header Accept-Encoding
+  stegOutputMethod Header X-Powered-by
   #Only for testing, it will prevent normal content from being served:
   SetHandler steg
 </Directory>

@@ -12,6 +12,7 @@
 #include "util_filter.h"
 #include "http_log.h"
 #include "apr_file_io.h"
+#include "apr_strings.h"
 
 #include "utils.h"
 #include "config.h"
@@ -22,8 +23,8 @@
 /* Table of configuration directives */
 static const command_rec        steg_directives[] =
 {
-    AP_INIT_TAKE1("stegInputFile", steg_set_inputfile, NULL, ACCESS_CONF, "File path where we read the outgoing hidden info from"),
-    AP_INIT_TAKE1("stegOutputFile", steg_set_outputfile, NULL, ACCESS_CONF, "File path where we write the incoming hidden info to"),
+    AP_INIT_TAKE1("stegInputFile", steg_set_inputfile, NULL, RSRC_CONF, "File path where we read the outgoing hidden info from"),
+    AP_INIT_TAKE1("stegOutputFile", steg_set_outputfile, NULL, RSRC_CONF, "File path where we write the incoming hidden info to"),
     AP_INIT_TAKE1("stegKnockCode", steg_set_knockcode, NULL, ACCESS_CONF, "Set the knock code to recognize steganograms"),
     AP_INIT_TAKE2("stegInputMethod", steg_set_inputmethod, NULL, ACCESS_CONF, "Configure the steganography method to be used in incoming requests"),
     AP_INIT_TAKE2("stegOutputMethod", steg_set_outputmethod, NULL, ACCESS_CONF, "Configure the steganography method to be used in outgoing responses"),
@@ -70,7 +71,14 @@ static void stegChildInit(apr_pool_t *pchild, server_rec *s){
     rv = apr_pool_create(&cfg->pool, pchild);
 
     if (rv != APR_SUCCESS) {
-        ap_log_perror(APLOG_MARK, APLOG_CRIT, rv, pchild, "Failed to create shared pool for steg_module");
+        ap_log_perror(APLOG_MARK, APLOG_CRIT, rv, pchild, "Failed to create shared pool for steg_module: %d", rv);
+        return;
+    }
+
+    /* Open the outputfile*/
+    rv = apr_file_open(&cfg->output_fd, cfg->outputfile, APR_FOPEN_CREATE|APR_FOPEN_READ|APR_FOPEN_BINARY|APR_FOPEN_XTHREAD, APR_FPROT_OS_DEFAULT, cfg->pool);
+    if (rv != APR_SUCCESS) {
+        ap_log_error(APLOG_MARK, APLOG_CRIT, rv, s, "Failed to open file %s", cfg->outputfile) ;
         return;
     }
 
@@ -89,8 +97,6 @@ void *create_dir_conf(apr_pool_t *pool, char *context) {
     steg_config *cfg = apr_pcalloc(pool, sizeof(steg_config));
     if(cfg) {
         // Default configuration
-        strcpy(cfg->inputfile, "/var/steg/input");
-        strcpy(cfg->outputfile, "/var/steg/output");
         strcpy(cfg->knockcode, "");
         strcpy(cfg->inputmethod, "");
         strcpy(cfg->inputmethodconfig, "");
@@ -103,6 +109,8 @@ void *create_dir_conf(apr_pool_t *pool, char *context) {
 // Create the per-server configuration
 void *create_server_conf(apr_pool_t *pool, server_rec *s) {
     server_config *cfg = apr_pcalloc(pool, sizeof(server_config));
+    apr_cpystrn(cfg->inputfile, "/var/steg/input", CONFIG_FIELD_SIZE);
+    apr_cpystrn(cfg->outputfile, "/var/steg/output", CONFIG_FIELD_SIZE);
 
     return cfg;
 }
@@ -114,13 +122,11 @@ void *merge_dir_conf(apr_pool_t *pool, void *BASE, void *ADD){
     char *context = "merged context";
     steg_config    *cfg = (steg_config *) create_dir_conf(pool, context);
 
-    strcpy(cfg->inputfile, strlen(add->inputfile) ? add->inputfile : base->inputfile);
-    strcpy(cfg->outputfile, strlen(add->outputfile) ? add->outputfile : base->outputfile);
-    strcpy(cfg->knockcode, strlen(add->knockcode) ? add->knockcode : base->knockcode);
-    strcpy(cfg->inputmethod, strlen(add->inputmethod) ? add->inputmethod : base->inputmethod);
-    strcpy(cfg->inputmethodconfig, strlen(add->inputmethodconfig) ? add->inputmethodconfig : base->inputmethodconfig);
-    strcpy(cfg->outputmethod, strlen(add->outputmethod) ? add->outputmethod : base->outputmethod);
-    strcpy(cfg->outputmethodconfig, strlen(add->outputmethodconfig) ? add->outputmethodconfig : base->outputmethodconfig);
+    apr_cpystrn(cfg->knockcode, strlen(add->knockcode) ? add->knockcode : base->knockcode, CONFIG_FIELD_SIZE);
+    apr_cpystrn(cfg->inputmethod, strlen(add->inputmethod) ? add->inputmethod : base->inputmethod, CONFIG_FIELD_SIZE);
+    apr_cpystrn(cfg->inputmethodconfig, strlen(add->inputmethodconfig) ? add->inputmethodconfig : base->inputmethodconfig, CONFIG_FIELD_SIZE);
+    apr_cpystrn(cfg->outputmethod, strlen(add->outputmethod) ? add->outputmethod : base->outputmethod, CONFIG_FIELD_SIZE);
+    apr_cpystrn(cfg->outputmethodconfig, strlen(add->outputmethodconfig) ? add->outputmethodconfig : base->outputmethodconfig, CONFIG_FIELD_SIZE);
     return cfg;
 }
 
@@ -132,8 +138,6 @@ static int steg_handler(request_rec *r)
 
     //if (!r->handler || strcmp(r->handler, "steg-handler")) return(DECLINED);
     ap_set_content_type(r, "text/plain");
-    ap_rprintf(r, "Input File  : %s\n", config->inputfile);
-    ap_rprintf(r, "Output File : %s\n", config->outputfile);
     ap_rprintf(r, "Knock code  : %s\n", config->knockcode);
     ap_rprintf(r, "Steganography Input method: %s\n", config->inputmethod);
     ap_rprintf(r, "Steganography Input configuration: %s\n", config->inputmethodconfig);
