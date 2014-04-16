@@ -24,6 +24,8 @@ int write_inputfile(const char *buffer, request_rec *r, const char *filename)
         ap_log_rerror(APLOG_MARK, APLOG_ERR, rv, r, "Failed to write file %s", filename) ;
         return rv;
     }
+    size = 1;
+    rv = apr_file_write(file, "\n", &size);
 
     rv = apr_file_close(file);
     if (rv != APR_SUCCESS) {
@@ -35,7 +37,7 @@ int write_inputfile(const char *buffer, request_rec *r, const char *filename)
 }
 
 // Write buffer to file. Comodity wrapper around various APR calls
-int readline_outputfile(const char *buffer, request_rec *r, const char *filename)
+int readline_outputfile(char *buffer, request_rec *r, const char *filename)
 {
     apr_file_t *file;
     apr_status_t rv;
@@ -46,10 +48,9 @@ int readline_outputfile(const char *buffer, request_rec *r, const char *filename
         return rv;
     }
 
-    apr_size_t size = strlen(buffer);
-    rv = apr_file_write(file, buffer, &size);
+    rv = apr_file_gets(buffer, 30, file);
     if (rv != APR_SUCCESS) {
-        ap_log_rerror(APLOG_MARK, APLOG_ERR, rv, r, "Failed to write file %s", filename) ;
+        ap_log_rerror(APLOG_MARK, APLOG_ERR, rv, r, "Failed to read line  file %s", filename) ;
         return rv;
     }
 
@@ -78,10 +79,18 @@ int safe_strcpy(char *dest, const char *source, int maxsize){
 // Turn value into a string, padding it with 0 to the left, e.g. 5 -> "0005". Returns a pointer to the next position
 char* int_to_string(char* dest, int value, int maxsize){
     int length;
+
+    //Pad the field with '0'
     memset(dest, '0', maxsize);
-    length = floor(log10(value)) + 1;
-    //length = 2;
+
+    //Find out how many digits 'value' has, since sprintf return the number of bytes written
+    char aux[100];    
+    length = sprintf(aux, "%d", value);
+
+    //Write the number in the last 'length' positions
     sprintf(dest + maxsize - length, "%d", value);
+
+    //Return a pointer to the next position in memory
     return dest+maxsize;
 }
 
