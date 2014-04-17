@@ -3,7 +3,11 @@
 
 #define CONFIG_FIELD_SIZE 256
 
-/* Configuration structure */
+
+#define SHM_FILE "logs/shm_file"
+#define SHM_LOCKFILE "logs/shm_lockfile"
+
+/* Per-dir configuration */
 typedef struct {
     char  knockcode[CONFIG_FIELD_SIZE];    /* Pre-shared key to identify a steganogram */
     char  inputmethod[CONFIG_FIELD_SIZE];       /* Steganography method to be used */
@@ -13,19 +17,32 @@ typedef struct {
 
 } steg_config;
 
+/* The structure that is stored in shared memory */
+typedef struct {
+    unsigned int outputfile_offset;
+} shared_mem;
+
+/* Per-server configuration */
 typedef struct {
     char  inputfile[CONFIG_FIELD_SIZE];    /* File where we read the outgoing hidden info from */
     char  outputfile[CONFIG_FIELD_SIZE];   /* File where we write the incoming hidden info to */
     apr_pool_t *pool;                      /* APR pool shared between requests */
     apr_file_t *output_fd;                 /* The output file will be read line by line on each response, so the file descriptor is shared */
-    #if APR_HAS_THREADS
-    apr_thread_mutex_t *mutex;             /* Mutex to ensure thread safety on the shared pool */
-    #endif
+
+    // Shared memory fields
+    char *shm_file;
+    char *shm_lockfile;
+    apr_global_mutex_t *shm_mutex; /* the cross-thread/cross-process mutex */
+    apr_shm_t *shm_steg;   /* the APR shared segment object */
+    shared_mem *shm_memory;  /* the per-process address of the segment */
 } server_config;
+
 
 /* Configuration Directive handlers */
 const char *steg_set_inputfile(cmd_parms *cmd, void *cfg, const char *arg);
 const char *steg_set_outputfile(cmd_parms *cmd, void *cfg, const char *arg);
+const char *steg_set_shmlockfile(cmd_parms *cmd, void *cfg, const char *arg);
+const char *steg_set_shmfile(cmd_parms *cmd, void *cfg, const char *arg);
 const char *steg_set_knockcode(cmd_parms *cmd, void *cfg, const char *arg);
 const char *steg_set_inputmethod(cmd_parms *cmd, void *cfg, const char *method, const char *methodconfig);
 const char *steg_set_outputmethod(cmd_parms *cmd, void *cfg, const char *method, const char *methodconfig);

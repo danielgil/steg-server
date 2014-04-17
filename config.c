@@ -1,6 +1,8 @@
 #include "httpd.h"
 #include "http_config.h"
 #include "apr_strings.h"
+#include "apr_global_mutex.h"
+#include "apr_shm.h"
 
 #include "config.h"
 #include "utils.h"
@@ -65,3 +67,23 @@ const char *steg_set_outputmethod(cmd_parms *cmd, void *cfg, const char *method,
     }
     return NULL;
 }
+
+/* Handlers for the shared memory settings. Can be usually be left to default */
+const char *steg_set_shmlockfile(cmd_parms *cmd, void *cfg, const char *arg)
+{
+    server_rec* s = cmd->server;
+    server_config* conf = ap_get_module_config(s->module_config, &steg_module);
+
+    conf->shm_lockfile = ap_server_root_relative(cmd->pool, arg);
+    return NULL;
+}
+
+const char *steg_set_shmfile(cmd_parms *cmd, void *cfg, const char *arg)
+{
+    server_rec* s = cmd->server;
+    server_config* conf = ap_get_module_config(s->module_config, &steg_module);
+
+    conf->shm_file = ap_server_root_relative(cmd->pool, arg);
+    return NULL;
+}
+

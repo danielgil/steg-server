@@ -1,6 +1,9 @@
 #include "httpd.h"
 #include "http_config.h"
 #include "apr_strings.h"
+#include "apr_global_mutex.h"
+#include "apr_shm.h"
+
 
 #include "config.h"
 #include "utils.h"
@@ -19,10 +22,15 @@ void packet_decoder(request_rec *r, steg_config *config, server_config *svr){
 // Dispatcher function that reads the config vector and calls the appropiate encoder for outgoing responses
 void packet_encoder(request_rec *r, steg_config *config, server_config *svr){
 
+    apr_status_t rv;
+
     //Read the data from the inputfile
     char data[PROTOCOL_MAX_PAYLOAD_SIZE];
-    readline_outputfile(data, r->server);
+    rv = readline_outputfile(data, r->server);
 
+    // If there is no data to inject, just return
+    if (rv != APR_SUCCESS) return ;
+    
     //In the prototype, only straight head injection steganography will be used
     if(!strcasecmp(config->outputmethod, "Header")){
         header_encoder(r, config, svr, data);

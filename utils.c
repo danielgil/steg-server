@@ -2,6 +2,8 @@
 #include "http_log.h"
 #include "apr_file_io.h"
 #include "math.h"
+#include "apr_global_mutex.h"
+#include "apr_shm.h"
 
 #include "utils.h"
 #include "config.h"
@@ -45,21 +47,48 @@ int readline_outputfile(char *buffer, server_rec *s)
     server_config* cfg = ap_get_module_config(s->module_config, &steg_module);
 
     // Start critical section
-    #if APR_HAS_THREADS
-        mutex_rv = apr_thread_mutex_lock(cfg->mutex);
-        if (mutex_rv != APR_SUCCESS) {
-            ap_log_error(APLOG_MARK, APLOG_ERR, mutex_rv, s, "Failed to acquire thread mutex");
-            return mutex_rv;
-        }
-    #endif
+    mutex_rv = apr_global_mutex_lock(cfg->shm_mutex);
+    if (mutex_rv != APR_SUCCESS) {
+        ap_log_error(APLOG_MARK, APLOG_ERR, mutex_rv, s, "Failed to acquire global mutex");
+        return mutex_rv;
+    }
+
+    /* Open the outputfile*/
+    rv = apr_file_open(&cfg->output_fd, cfg->outputfile, APR_FOPEN_READ|APR_FOPEN_XTHREAD|APR_FOPEN_BUFFERED, APR_FPROT_OS_DEFAULT, cfg->pool);
+    if (rv != APR_SUCCESS) {
+        ap_log_error(APLOG_MARK, APLOG_CRIT, rv, s, "Failed to open file %s", cfg->outputfile) ;
+        return rv;
+    }
+   
+    /* Move the pointer to the first unread line */
+    rv = apr_file_seek(cfg->output_fd, APR_SET, (apr_off_t *) &cfg->shm_memory->outputfile_offset);
+    if (rv != APR_SUCCESS) {
+        ap_log_error(APLOG_MARK, APLOG_CRIT, rv, s, "Failed to move file pointer to the end of %s", cfg->outputfile) ;
+        return rv;
+    }
+
+    /* Read the line and advance the counter */
     rv = apr_file_gets(buffer, 256, cfg->output_fd);
-    rv = apr_file_gets(buffer, 256, cfg->output_fd);
-    #if APR_HAS_THREADS
-        mutex_rv = apr_thread_mutex_unlock(cfg->mutex);
-        if (mutex_rv != APR_SUCCESS) {
-            ap_log_error(APLOG_MARK, APLOG_ERR, mutex_rv, s, "Failed to release thread mutex");
-        }
-    #endif
+    if (rv != APR_SUCCESS) {
+        return rv;
+    }
+
+    cfg->shm_memory->outputfile_offset += strlen(buffer);
+
+    /* Close the outputfile*/
+    rv = apr_file_close(cfg->output_fd);
+    if (rv != APR_SUCCESS) {
+        ap_log_error(APLOG_MARK, APLOG_CRIT, rv, s, "Failed to open file %s", cfg->outputfile) ;
+        return rv;
+    }    
+
+    //http://www.codemass.com/mod_shm_counter/downloads/mod_shm_counter.c
+
+    mutex_rv = apr_global_mutex_unlock(cfg->shm_mutex);
+    if (mutex_rv != APR_SUCCESS) {
+        ap_log_error(APLOG_MARK, APLOG_ERR, mutex_rv, s, "Failed to release global mutex");
+    }
+
     // End critical section
     return rv;
 }
