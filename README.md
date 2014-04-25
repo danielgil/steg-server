@@ -5,9 +5,7 @@ Description
 -----------
 This is the server component of the HTTP Steganography project. 
 
-This Apache module is meant to work together with the client component of the HTTP Steganography project (not yet implemented) to allow hidden client-server communication within the already established web channel, thus removing the need to work around firewall policies and hopefully evading intrusion detection systems. 
-
-**The project is in a very early stage, and most functionality is not yet implemented.**
+This Apache module is meant to work together with the client component of the HTTP Steganography project to allow hidden client-server communication within the already established web channel, thus removing the need to work around firewall policies and hopefully evading intrusion detection systems. 
 
 Quick Start
 -----------
