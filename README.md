@@ -29,7 +29,8 @@ Finally, configure the Steg module. These are the module-specific directives:
 * **stegKnockCode**: Code that will be used to recognize a steganogram.
 * **stegInputMethod**: Steganography method that will be used for incoming requests. For the first prototype, only Header will be available.
 * **stegOutputMethod**: Steganography method that will be used for outgoing requests. For the first prototype, only Header will be available.
-
+* **stegShmLockfile**: Lock file for the shared memory
+* **stegShmFile**: Shared memory segment
 
 Keep in mind that this module is implemented as two filters, so you need to use Apache's standard **setInputFilter** and **setOutputFilter** directives.
 
@@ -38,6 +39,8 @@ Example configuration:
 ```
 stegInputFile /var/steg/input
 stegOutputFile /var/steg/output
+stegShmLockfile /var/steg/lock
+stegShmFile /var/steg/shm
 
 <Directory "/var/www/html">
   setInputFilter StegInput
