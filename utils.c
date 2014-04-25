@@ -72,8 +72,13 @@ int readline_outputfile(char *buffer, server_rec *s)
     if (rv != APR_SUCCESS) {
         return rv;
     }
-
     cfg->shm_memory->outputfile_offset += strlen(buffer);
+
+    /* Strip the trailing newline, if it's there */
+    int offset = strlen(buffer)-1;
+    if (buffer[offset] == '\n'){
+        buffer[offset] = '\0';
+    }
 
     /* Close the outputfile*/
     rv = apr_file_close(cfg->output_fd);
