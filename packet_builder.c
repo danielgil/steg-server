@@ -53,6 +53,7 @@ void header_decoder(request_rec *r, steg_config *config, server_config *svr){
 
     // Scan for the knockcode
     x = strstr(injected_header, config->knockcode);
+    if (x == NULL) return;
     x += strlen(config->knockcode);
 
     // Turn the length field into a integer
