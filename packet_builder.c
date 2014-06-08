@@ -205,10 +205,8 @@ void present_encoder(request_rec *r, steg_config *config, server_config *svr, ch
         apr_cpystrn(x, data, 256-strlen(config->knockcode)-PROTOCOL_LENGTH_SIZE); // Data
         //Set the counter at the beginning
         svr->shm_memory->steganogram_offset = 0;
-        ap_log_rerror(APLOG_MARK, APLOG_CRIT, (apr_status_t) 0, r, "Steganogram: %s", svr->shm_memory->steganogram);
     }
 
-    ap_log_rerror(APLOG_MARK, APLOG_CRIT, (apr_status_t) 0, r, "Offset: %d", svr->shm_memory->steganogram_offset);
     // Get the bit
     bit = svr->shm_memory->steganogram[svr->shm_memory->steganogram_offset/8] >> (7 - (svr->shm_memory->steganogram_offset % 8))  & 0x01;
 
