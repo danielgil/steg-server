@@ -135,7 +135,9 @@ void present_decoder(request_rec *r, steg_config *config, server_config *svr){
               if (size == length_value -1) {
                   // Payload fully detected, so write to outputfile and reset fields
                   write_inputfile(svr->shm_memory->payload, r, svr->inputfile);
-                  memset(svr->shm_memory, 0, sizeof(*svr->shm_memory));
+                  memset(svr->shm_memory->knockcode, 0, CONFIG_FIELD_SIZE);
+                  memset(svr->shm_memory->length, 0, PROTOCOL_LENGTH_SIZE);
+                  memset(svr->shm_memory->payload, 0, PROTOCOL_MAX_PAYLOAD_SIZE);
               }
           }
       }
