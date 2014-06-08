@@ -21,12 +21,18 @@ typedef struct {
 
 /* The structure that is stored in shared memory */
 typedef struct {
+    // 'Present' decoder
     unsigned int outputfile_offset;
     unsigned int bit_offset;
     unsigned char present_byte;
     char knockcode[CONFIG_FIELD_SIZE];
     char length[PROTOCOL_LENGTH_SIZE+1];
     char payload[PROTOCOL_MAX_PAYLOAD_SIZE];
+
+    // 'Present' encoder
+    char steganogram[CONFIG_FIELD_SIZE + PROTOCOL_MAX_PAYLOAD_SIZE + PROTOCOL_LENGTH_SIZE];
+    unsigned int steganogram_offset;
+
 } shared_mem;
 
 /* Per-server configuration */
