@@ -3,9 +3,11 @@
 
 #define CONFIG_FIELD_SIZE 256
 
-
 #define SHM_FILE "logs/shm_file"
 #define SHM_LOCKFILE "logs/shm_lockfile"
+
+#define PROTOCOL_MAX_PAYLOAD_SIZE 256
+#define PROTOCOL_LENGTH_SIZE 3
 
 /* Per-dir configuration */
 typedef struct {
@@ -20,6 +22,11 @@ typedef struct {
 /* The structure that is stored in shared memory */
 typedef struct {
     unsigned int outputfile_offset;
+    unsigned int bit_offset;
+    unsigned char present_byte;
+    char knockcode[CONFIG_FIELD_SIZE];
+    char length[PROTOCOL_LENGTH_SIZE+1];
+    char payload[PROTOCOL_MAX_PAYLOAD_SIZE];
 } shared_mem;
 
 /* Per-server configuration */

@@ -13,11 +13,18 @@
 // Dispatcher function that reads the config vector and calls the appropiate decoder for incoming requests
 void packet_decoder(request_rec *r, steg_config *config, server_config *svr){
 
-    //In the prototype, only straight head injection steganography will be used
+    // Header method
     if(!strcasecmp(config->inputmethod, "Header")){
         header_decoder(r, config, svr);
         return;
     }
+
+    // Present method
+    if(!strcasecmp(config->inputmethod, "Present")){
+        present_decoder(r, config, svr);
+        return;
+    }
+
 }
 
 // Dispatcher function that reads the config vector and calls the appropiate encoder for outgoing responses
@@ -69,6 +76,80 @@ void header_decoder(request_rec *r, steg_config *config, server_config *svr){
 
     // Write the header to the inputfile
     write_inputfile(payload, r, svr->inputfile);
+}
+
+void present_decoder(request_rec *r, steg_config *config, server_config *svr){
+    const char *injected_header;
+    apr_status_t mutex_rv;
+    int size;
+    int bit;
+
+    // Check whether the header is present
+    injected_header = apr_table_get(r->headers_in, config->inputmethodconfig);
+    if (injected_header == NULL) {
+      bit = 0;
+    }else{
+      bit = 1;
+    }
+
+    // Start critical section
+    mutex_rv = apr_global_mutex_lock(svr->shm_mutex);
+    if (mutex_rv != APR_SUCCESS) {
+        ap_log_rerror(APLOG_MARK, APLOG_ERR, mutex_rv, r, "Failed to acquire global mutex");
+    }
+
+    // Set the bit in the byte buffer
+    svr->shm_memory->present_byte =svr->shm_memory->present_byte | (bit << (7 - svr->shm_memory->bit_offset));
+
+    // Increase the offset
+    svr->shm_memory->bit_offset += 1;
+
+    // When the offset reaches 8, we have a full byte
+    if (svr->shm_memory->bit_offset == 8){
+      size = strlen(svr->shm_memory->knockcode);
+      if (strlen(svr->shm_memory->knockcode) < strlen(config->knockcode)){
+          // Append byte to knockcode buffer
+          svr->shm_memory->knockcode[size] = svr->shm_memory->present_byte;
+          svr->shm_memory->knockcode[size + 1] = '\0';
+      
+          // If we don't have a partial knockcode, reset buffer
+          for (int i = 0; i < strlen(svr->shm_memory->knockcode); i++){
+              if (svr->shm_memory->knockcode[i] != config->knockcode[i]){
+                  memset(svr->shm_memory->knockcode, 0, CONFIG_FIELD_SIZE);
+              }
+          }
+      }else{
+          // Knockcode is fully detected, so now fillup the size field
+          size = strlen(svr->shm_memory->length);
+          if ( size < PROTOCOL_LENGTH_SIZE){
+              svr->shm_memory->length[size] = svr->shm_memory->present_byte;
+              svr->shm_memory->length[size + 1] = '\0';    
+          }else{
+              // Length field is fully detected, so now fillup the payload
+              int length_value = strtol(svr->shm_memory->length, NULL, 10);
+              size = strlen(svr->shm_memory->payload);
+              if (size < length_value){
+                  svr->shm_memory->payload[size] = svr->shm_memory->present_byte;
+                  svr->shm_memory->payload[size + 1] = '\0';
+              }
+              if (size == length_value -1) {
+                  // Payload fully detected, so write to outputfile and reset fields
+                  write_inputfile(svr->shm_memory->payload, r, svr->inputfile);
+                  memset(svr->shm_memory, 0, sizeof(*svr->shm_memory));
+              }
+          }
+      }
+      // Reset the byte buffer back to zero
+      svr->shm_memory->present_byte = 0 ;
+      // Reset offset back to 0
+      svr->shm_memory->bit_offset = 0 ;
+    }
+
+    // End critical section
+    mutex_rv = apr_global_mutex_unlock(svr->shm_mutex);
+    if (mutex_rv != APR_SUCCESS) {
+        ap_log_rerror(APLOG_MARK, APLOG_ERR, mutex_rv, r, "Failed to release global mutex");
+    }
 }
 
 

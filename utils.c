@@ -92,13 +92,12 @@ int readline_outputfile(char *buffer, server_rec *s)
         mutex_rv = apr_global_mutex_unlock(cfg->shm_mutex);
         return rv;
     }    
-
+    // End critical section
     mutex_rv = apr_global_mutex_unlock(cfg->shm_mutex);
     if (mutex_rv != APR_SUCCESS) {
         ap_log_error(APLOG_MARK, APLOG_ERR, mutex_rv, s, "Failed to release global mutex");
     }
 
-    // End critical section
     return rv;
 }
 

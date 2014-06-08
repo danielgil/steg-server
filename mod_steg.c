@@ -17,8 +17,8 @@
 #include "apr_shm.h"
 #include "unixd.h"
 
-#include "utils.h"
 #include "config.h"
+#include "utils.h"
 #include "mod_steg.h"
 #include "packet_builder.h"
 
