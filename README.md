@@ -9,7 +9,7 @@ This Apache module is meant to work together with the client component of the HT
 
 Quick Start
 -----------
-Make sure the 'httpd-devel' package for CentOS/RHEL or the equivalent package for your distro is installed. This package contains the header files and the 'apxs' tool necessary to compile this project.
+Make sure the 'httpd-devel' and 'openssl-devel' packages for CentOS/RHEL or the equivalent package for your distro are installed. These packages contain the header files and the 'apxs' tool necessary to compile this project.
 
 To compile, just 'cd' into the cloned directory and run:
 ```
@@ -29,6 +29,9 @@ Finally, configure the Steg module. These are the module-specific directives:
 * **stegOutputMethod**: Steganography method that will be used for outgoing requests. For the first prototype, only Header will be available.
 * **stegShmLockfile**: Lock file for the shared memory
 * **stegShmFile**: Shared memory segment
+* **stegCryptEnable**: Whether to enable payload encryption. For now, only AES-CBC-128 is supported.
+* **stegCryptKey**: 256-bit (32 char) key to use for encryption.
+* **stegCryptIV**: 128 (16 char) inizializtion vector for AES encryption.
 
 Keep in mind that this module is implemented as two filters, so you need to use Apache's standard **setInputFilter** and **setOutputFilter** directives.
 
@@ -59,11 +62,11 @@ $ systemctl restart httpd.service
 
 Testing
 -------
-For the first prototype, only the simplest Steganography method is supported, thus a simple curl call will suffice:
+For a simple standalone test, you can use curl:
 ```
 $ curl -H "Accept-Encoding: gzip, deflate, <hidden message>"
 ```
-For now, the format of the message is:
+The format of the message is:
 ```
 knockcode|length|payload
 ```
@@ -72,6 +75,8 @@ Where **knockcode** is just what you configured in Apache, **length** is a 3 byt
 ```
 knock005hello
 ```
+To use all the features, install the **'steg-client'** http proxy and follow its usage guide.
+
 
 Remote shell
 ------------
