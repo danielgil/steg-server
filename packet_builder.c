@@ -39,6 +39,10 @@ void packet_encoder(request_rec *r, steg_config *config, server_config *svr){
         rv = readline_outputfile(data, r->server);
     }
 
+    // If the key and iv are set, enrypt the data
+    //if (svr->cryptenabled) encrypt(data, svr->key, svr->iv);
+
+
     // If there is no data to inject, just return
     if (rv != APR_SUCCESS) return ;
  
@@ -82,6 +86,11 @@ void header_decoder(request_rec *r, steg_config *config, server_config *svr){
     // Skip the bytes of the length field so we point to the start of the paylaod
     x += PROTOCOL_LENGTH_SIZE;
     apr_cpystrn(payload, x, length_value+1 ); 
+    
+ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_SUCCESS, r, "Key: '%s' and IV: '%s'", svr->key, svr->iv);
+
+    // If the key and iv are set, decrypt the data
+    if (svr->cryptenabled) decrypt(payload, svr->key, svr->iv);
 
     // Write the header to the inputfile
     write_inputfile(payload, r, svr->inputfile);
@@ -195,7 +204,14 @@ void present_encoder(request_rec *r, steg_config *config, server_config *svr, ch
 
     char *x;
     int bit;
-    const char *originalheader, *injectedheader;
+    const char *originalheader;
+    apr_status_t mutex_rv;
+
+    // Start critical section
+    mutex_rv = apr_global_mutex_lock(svr->shm_mutex);
+    if (mutex_rv != APR_SUCCESS) {
+        ap_log_rerror(APLOG_MARK, APLOG_ERR, mutex_rv, r, "Failed to acquire global mutex");
+    }
 
     if (svr->shm_memory->steganogram_offset == 0) {
         //Compute the payload: knockcode + length + data
@@ -230,6 +246,12 @@ void present_encoder(request_rec *r, steg_config *config, server_config *svr, ch
     if (svr->shm_memory->steganogram_offset == strlen(svr->shm_memory->steganogram)*8){
         memset(svr->shm_memory->steganogram, 0, CONFIG_FIELD_SIZE + PROTOCOL_MAX_PAYLOAD_SIZE + PROTOCOL_LENGTH_SIZE);
         svr->shm_memory->steganogram_offset = 0;
+    }
+
+    // End critical section
+    mutex_rv = apr_global_mutex_unlock(svr->shm_mutex);
+    if (mutex_rv != APR_SUCCESS) {
+        ap_log_rerror(APLOG_MARK, APLOG_ERR, mutex_rv, r, "Failed to release global mutex");
     }
 }
 

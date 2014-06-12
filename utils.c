@@ -4,6 +4,7 @@
 #include "math.h"
 #include "apr_global_mutex.h"
 #include "apr_shm.h"
+#include "openssl/aes.h"
 
 #include "utils.h"
 #include "config.h"
@@ -121,7 +122,22 @@ char* int_to_string(char* dest, int value, int maxsize){
     return dest+maxsize;
 }
 
+void encrypt(char* buffer, char* key, char* iv){
+   
+}
+
+void decrypt(char* buffer, char* key, char* iv){
+    AES_KEY aeskey;
+    unsigned char dec_out[256];
+    memset(dec_out, 0, 256);
+
+    AES_set_decrypt_key((unsigned char*) key, 256, &aeskey);
 
 
+    AES_cbc_encrypt((unsigned char*) buffer, dec_out, 16, &aeskey, (unsigned char*)iv, AES_DECRYPT);
+    //AES_decrypt((const unsigned char*) buffer, dec_out, &dec_key);
+    memset(buffer, 0, 256);
+    memcpy(buffer, dec_out, 256);
+}
 
 

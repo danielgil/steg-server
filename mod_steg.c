@@ -33,6 +33,9 @@ static const command_rec        steg_directives[] =
     AP_INIT_TAKE1("stegKnockCode", steg_set_knockcode, NULL, ACCESS_CONF, "Set the knock code to recognize steganograms"),
     AP_INIT_TAKE2("stegInputMethod", steg_set_inputmethod, NULL, ACCESS_CONF, "Configure the steganography method to be used in incoming requests"),
     AP_INIT_TAKE2("stegOutputMethod", steg_set_outputmethod, NULL, ACCESS_CONF, "Configure the steganography method to be used in outgoing responses"),
+    AP_INIT_TAKE1("stegCryptKey", steg_set_cryptkey, NULL, RSRC_CONF, "AES Key to encrypt the payloads"),
+    AP_INIT_TAKE1("stegCryptIV", steg_set_cryptiv, NULL, RSRC_CONF, "AES Inizialization vector to encrypt the payloads"),
+    AP_INIT_TAKE1("stegCryptEnabled", steg_set_cryptenabled, NULL, RSRC_CONF, "Whether to enable cryptography"),
     { NULL }
 };
 
@@ -160,6 +163,9 @@ void *create_server_conf(apr_pool_t *pool, server_rec *s) {
     server_config *cfg = apr_pcalloc(pool, sizeof(server_config));
     apr_cpystrn(cfg->inputfile, "/var/steg/input", CONFIG_FIELD_SIZE);
     apr_cpystrn(cfg->outputfile, "/var/steg/output", CONFIG_FIELD_SIZE);
+    cfg->cryptenabled = 0;
+    memset(cfg->key, 0, AES_KEY_SIZE);
+    memset(cfg->iv, 0, AES_IV_SIZE);
 
     // Initialize shared memory with default values
     cfg->shm_file = ap_server_root_relative(pool, SHM_FILE);

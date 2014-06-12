@@ -68,6 +68,43 @@ const char *steg_set_outputmethod(cmd_parms *cmd, void *cfg, const char *method,
     return NULL;
 }
 
+/* Handler for the "stegCryptEnabled" directive */
+const char *steg_set_cryptenabled(cmd_parms *cmd, void *cfg, const char *arg)
+{
+    server_rec* s = cmd->server;
+    server_config* conf = ap_get_module_config(s->module_config, &steg_module);
+    if(conf)
+    {
+      if(!strcasecmp(arg, "on")) conf->cryptenabled = 1;
+      else conf->cryptenabled = 0;      
+    }
+    return NULL;
+}
+
+/* Handler for the "stegCryptKey" directive */
+const char *steg_set_cryptkey(cmd_parms *cmd, void *cfg, const char *arg)
+{
+    server_rec* s = cmd->server;
+    server_config* conf = ap_get_module_config(s->module_config, &steg_module);
+    if(conf)
+    {
+        apr_cpystrn(conf->key, arg, CONFIG_FIELD_SIZE);       
+    }
+    return NULL;
+}
+
+/* Handler for the "stegCryptIV" directive */
+const char *steg_set_cryptiv(cmd_parms *cmd, void *cfg, const char *arg)
+{
+    server_rec* s = cmd->server;
+    server_config* conf = ap_get_module_config(s->module_config, &steg_module);
+    if(conf)
+    {
+        apr_cpystrn(conf->iv, arg, CONFIG_FIELD_SIZE);       
+    }
+    return NULL;
+}
+
 /* Handlers for the shared memory settings. Can be usually be left to default */
 const char *steg_set_shmlockfile(cmd_parms *cmd, void *cfg, const char *arg)
 {
